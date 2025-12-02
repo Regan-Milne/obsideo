@@ -193,6 +193,40 @@ class Client:
         except Exception:
             return False
     
+    def verify_file(self, file_path: Union[str, Path], name: str, version: Optional[int] = None) -> bool:
+        """
+        Verify that a materialized file matches the expected hash for an artifact.
+        
+        Args:
+            file_path: Path to the file to verify
+            name: Logical name of the artifact this file should represent
+            version: Version number (None for latest)
+            
+        Returns:
+            True if file matches expected hash
+            
+        Raises:
+            ChecksumMismatchError: If verification fails with detailed mismatch info
+            FileNotFoundError: If artifact metadata doesn't exist
+        """
+        # Get expected hash from artifact metadata
+        artifact = self.store.get_artifact(name, version)
+        if artifact is None:
+            raise FileNotFoundError(f"Artifact not found: {name}" + 
+                                   (f" version {version}" if version else ""))
+        
+        # Calculate current file hash
+        current_hash = blake3_file(file_path)
+        
+        # Check for mismatch
+        if current_hash != artifact.hash:
+            raise ChecksumMismatchError(
+                f"File integrity check failed for {name}@{artifact.version}: "
+                f"expected {artifact.hash}, got {current_hash}"
+            )
+        
+        return True
+    
     def list_artifacts(self) -> List[str]:
         """
         List all artifact names in the store.
