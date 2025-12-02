@@ -200,20 +200,23 @@ class Client:
         version: Optional[int] = None,
     ) -> None:
         """
-        Verify that a materialized file matches the expected hash for an artifact.
-        
+        Verify that a local file matches the stored checksum for an artifact.
+
         Args:
-            path: Path to the file to verify
-            name: Logical name of the artifact this file should represent
+            path: Path to the local file to verify
+            name: Logical name of the artifact
             version: Version number (None for latest)
-            
+
         Raises:
-            ChecksumMismatchError: If verification fails with detailed mismatch info
-            FileNotFoundError: If artifact metadata doesn't exist
+            FileNotFoundError: If artifact doesn't exist
+            ChecksumMismatchError: If hashes don't match
         """
         artifact = self.store.get_artifact(name, version)
         if artifact is None:
-            raise FileNotFoundError(f"Artifact not found: {name} {version or ''}")
+            raise FileNotFoundError(
+                f"Artifact not found: {name}" +
+                (f" version {version}" if version else "")
+            )
 
         path = Path(path)
         current_hash = blake3_file(path)
