@@ -130,14 +130,7 @@ class Client:
         if not blob_file.exists():
             raise FileNotFoundError(f"Blob file missing: {blob_file}")
         
-        # Verify checksum if requested
-        if verify:
-            if not verify_blob(self.root, artifact.hash):
-                raise ChecksumMismatchError(
-                    f"Checksum mismatch for {name} v{artifact.version}"
-                )
-        
-        # Copy to destination
+        # Copy to destination first
         if dst is None:
             # Create temporary file with original extension if possible
             suffix = ""
@@ -156,6 +149,15 @@ class Client:
         
         # Copy the blob to destination
         shutil.copy2(blob_file, dst)
+        
+        # CRITICAL FIX: Verify checksum of the materialized file
+        if verify:
+            current_hash = blake3_file(dst)
+            if current_hash != artifact.hash:
+                raise ChecksumMismatchError(
+                    f"Checksum mismatch for {name}@{artifact.version}: "
+                    f"expected {artifact.hash}, got {current_hash}"
+                )
         
         return dst
     
